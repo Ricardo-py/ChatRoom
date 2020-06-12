@@ -95,7 +95,7 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
     @Override
     public void onNewMessageArrived(final ClientHandler handler, final String msg) {
         //这是个回调函数，当有消息的时候会触发回调
-
+        //System.out.println(msg.replace("\n","-n-"));
         // 异步提交转发任务
         forwardingThreadPoolExecutor.execute(() -> {
             synchronized (TCPServer.this) {

@@ -2,6 +2,7 @@ package com.richard.sample.client;
 
 
 
+import com.richard.library.clink.core.Connector;
 import com.richard.library.clink.utils.CloseUtils;
 import com.richard.sample.client.bean.ServerInfo;
 
@@ -10,47 +11,40 @@ import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.channels.SocketChannel;
 
-public class TCPClient {
-    private final Socket socket;
-    private final ReadHandler readHandler;
-    private final PrintStream printStream;
+public class TCPClient extends Connector {
 
-    public TCPClient(Socket socket, ReadHandler readHandler) throws IOException {
-        this.socket = socket;
-        this.readHandler = readHandler;
-        this.printStream = new PrintStream(socket.getOutputStream());
+    public TCPClient(SocketChannel socketChannel) throws IOException {
+        setup(socketChannel);
     }
 
     public void exit() {
-        readHandler.exit();
-        CloseUtils.close(printStream);
-        CloseUtils.close(socket);
+        CloseUtils.close(this);
     }
 
-    public void send(String msg) {
-        printStream.println(msg);
+
+    @Override
+    public void onChannelClosed(SocketChannel channel){
+        super.onChannelClosed(channel);
+        System.out.println("连接已经关闭");
     }
 
     public static TCPClient startWith(ServerInfo info) throws IOException {
-        Socket socket = new Socket();
-        // 超时时间
-        socket.setSoTimeout(3000);
+        SocketChannel socketChannel = SocketChannel.open();
 
         // 连接本地，端口2000；超时时间3000ms
-        socket.connect(new InetSocketAddress(Inet4Address.getByName(info.getAddress()), info.getPort()), 3000);
+        socketChannel.connect(new InetSocketAddress(Inet4Address.getByName(info.getAddress()), info.getPort()));
 
         System.out.println("已发起服务器连接，并进入后续流程～");
-        System.out.println("客户端信息：" + socket.getLocalAddress() + " P:" + socket.getLocalPort());
-        System.out.println("服务器信息：" + socket.getInetAddress() + " P:" + socket.getPort());
+        System.out.println("客户端信息：" + socketChannel.getLocalAddress().toString());
+        System.out.println("服务器信息：" + socketChannel.getRemoteAddress());
 
         try {
-            ReadHandler readHandler = new ReadHandler(socket.getInputStream());
-            readHandler.start();
-            return new TCPClient(socket, readHandler);
+            return new TCPClient(socketChannel);
         } catch (Exception e) {
             System.out.println("连接异常");
-            CloseUtils.close(socket);
+            CloseUtils.close(socketChannel);
         }
 
         return null;

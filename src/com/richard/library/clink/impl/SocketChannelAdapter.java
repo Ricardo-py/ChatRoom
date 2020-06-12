@@ -19,6 +19,8 @@ public class SocketChannelAdapter implements
     private final SocketChannel channel;
     private final IoProvider ioProvider;
 
+    private IoArgs receiveArgsTemp;
+
     //这里传入的listener就是Connector
     private final OnChannelStatusChangedListener listener;
 
@@ -26,6 +28,21 @@ public class SocketChannelAdapter implements
 
     private IoArgs.IoArgsEventListener sendIoEventListener;
 
+    @Override
+    public boolean receiveAsync(IoArgs args) throws IOException {
+        if (isClosed.get()) {
+            throw new IOException("Current channel is closed!");
+        }
+        receiveArgsTemp = args;
+        return ioProvider.registerInput(channel, inputCallback);
+    }
+
+    @Override
+    public boolean setReceiveListener(IoArgs.IoArgsEventListener listener) {
+        //这里在AsyncReceiveDispatcher中设置AsyncReceiveDispatcher中的ioArgsEventListener
+        receiveIoEventListener = listener;
+        return true;
+    }
 
     public SocketChannelAdapter(SocketChannel channel, IoProvider ioProvider,
                                 OnChannelStatusChangedListener listener) throws IOException {
@@ -39,18 +56,18 @@ public class SocketChannelAdapter implements
     }
 
 
-    @Override
-    public boolean receiveAsync(IoArgs.IoArgsEventListener listener) throws IOException {
-        if (isClosed.get()) {
-            throw new IOException("Current channel is closed!");
-        }
-
-        //这里传入的listener是Connector中的echoReceiveListener
-        //inputCallback里面执行的就是receiveIoEventListener中的方法
-        receiveIoEventListener = listener;
-        return ioProvider.registerInput(channel, inputCallback);
-
-    }
+//    @Override
+//    public boolean receiveAsync(IoArgs.IoArgsEventListener listener) throws IOException {
+//        if (isClosed.get()) {
+//            throw new IOException("Current channel is closed!");
+//        }
+//
+//        //这里传入的listener是Connector中的echoReceiveListener
+//        //inputCallback里面执行的就是receiveIoEventListener中的方法
+//        receiveIoEventListener = listener;
+//        return ioProvider.registerInput(channel, inputCallback);
+//
+//    }
 
     @Override
     public boolean sendAsync(IoArgs args, IoArgs.IoArgsEventListener listener) throws IOException {
@@ -79,47 +96,71 @@ public class SocketChannelAdapter implements
         }
     }
 
+
     private final IoProvider.HandleInputCallback inputCallback = new IoProvider.HandleInputCallback() {
         @Override
         protected void canProviderInput() {
             if (isClosed.get()) {
                 return;
             }
-            IoArgs args = new IoArgs();
 
+            IoArgs args = receiveArgsTemp;
 
+            //设置的是AsyncReceiveDispatcher中的ioArgsEventListener
             IoArgs.IoArgsEventListener listener = SocketChannelAdapter.this.receiveIoEventListener;
-
-
-            if (listener != null) {
-                listener.onStarted(args);
-            }
+            listener.onStarted(args);
 
             try {
-                // 具体的读取操作
-                if (args.read(channel) > 0 && listener != null) {
-                    // 读取完成回调
+                if (args.readFrom(channel) > 0){
                     listener.onCompleted(args);
-                } else {
-                    throw new IOException("Cannot read any data!");
-                }
-            } catch (IOException ignored) {
+                }else
+                    throw new IOException("Cannot readFrom any data!");
+            } catch (IOException e) {
                 CloseUtils.close(SocketChannelAdapter.this);
+                e.printStackTrace();
             }
+//            try {
+//                // 具体的读取操作
+//                int read_size = args.read(channel);
+//                System.out.println(read_size);
+//                if (read_size > 0 && listener != null) {
+//                    // 读取完成回调
+//                    listener.onCompleted(args);
+//                } else {
+//                    throw new IOException("Cannot read any data!");
+//                }
+//            } catch (IOException ignored) {
+//                CloseUtils.close(SocketChannelAdapter.this);
+//            }
 
 
         }
     };
 
 
+    //这里面的代码是添加到线程池中运行的，需要保证线程安全
     private final IoProvider.HandleOutputCallback outputCallback = new IoProvider.HandleOutputCallback() {
         @Override
         protected void canProviderOutput(Object attach) {
             if (isClosed.get()) {
                 return;
             }
+            IoArgs args = getAttach();
+            IoArgs.IoArgsEventListener listener = sendIoEventListener;
+            listener.onStarted(args);
+
+            try {
+                if (args.writeTo(channel) > 0){
+                    listener.onCompleted(args);
+                }else
+                    throw new IOException("Cannot Write any data!");
+            } catch (IOException e) {
+                CloseUtils.close(SocketChannelAdapter.this);
+                e.printStackTrace();
+            }
+
             // TODO
-            sendIoEventListener.onCompleted(null);
+           // sendIoEventListener.onCompleted(null);
         }
     };
 

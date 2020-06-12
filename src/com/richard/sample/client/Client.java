@@ -2,6 +2,8 @@ package com.richard.sample.client;
 
 
 
+import com.richard.library.clink.core.IoContext;
+import com.richard.library.clink.impl.IoSelectorProvider;
 import com.richard.sample.client.bean.ServerInfo;
 
 import java.io.BufferedReader;
@@ -10,9 +12,14 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 public class Client {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
+
+        IoContext.setup()
+                .ioProvider(new IoSelectorProvider())
+                .start();
+
         ServerInfo info = UDPSearcher.searchServer(10000);
-        System.out.println("Server:" + info);
+        System.out.println("Client:" + info);
 
         if (info != null) {
             TCPClient tcpClient = null;
@@ -22,9 +29,8 @@ public class Client {
                 if (tcpClient == null) {
                     return;
                 }
-
                 write(tcpClient);
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             } finally {
                 if (tcpClient != null) {
@@ -32,10 +38,12 @@ public class Client {
                 }
             }
         }
+
+        IoContext.close();
     }
 
 
-    private static void write(TCPClient tcpClient) throws IOException {
+    private static void write(TCPClient tcpClient) throws IOException, InterruptedException {
         // 构建键盘输入流
         InputStream in = System.in;
         BufferedReader input = new BufferedReader(new InputStreamReader(in));
@@ -43,12 +51,18 @@ public class Client {
         do {
             // 键盘读取一行
             String str = input.readLine();
-            // 发送到服务器
-            tcpClient.send(str);
+            System.out.println(str.length());
+                // 发送到服务器
+                tcpClient.send(str);
+                tcpClient.send(str);
+                //Thread.sleep(1000);
+                tcpClient.send(str);
+                //Thread.sleep(1000);
+                tcpClient.send(str);
+                if ("00bye00".equalsIgnoreCase(str)) {
+                    break;
+                }
 
-            if ("00bye00".equalsIgnoreCase(str)) {
-                break;
-            }
         } while (true);
     }
 

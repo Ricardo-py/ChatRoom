@@ -54,6 +54,8 @@ public class IoSelectorProvider implements IoProvider {
 
         outputHandlePool = Executors.newFixedThreadPool(4,
                 new IoProviderThreadFactory("IoProvider-Output-Thread-"));
+//        inputHandlePool = Executors.newSingleThreadExecutor();
+//        outputHandlePool = Executors.newSingleThreadExecutor();
 
         // 开始输出输入的监听
         startRead();
@@ -78,6 +80,9 @@ public class IoSelectorProvider implements IoProvider {
                                 handleSelection(selectionKey, SelectionKey.OP_READ, inputCallbackMap, inputHandlePool);
                             }
                         }
+
+                        //System.out.println("有数据需要读取:" + selectionKeys.size());
+
                         selectionKeys.clear();
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -250,6 +255,7 @@ public class IoSelectorProvider implements IoProvider {
         // 重点
         // 取消继续对keyOps的监听
         //如果不这么做，将会导致处理线程的大量堆积
+
         key.interestOps(key.readyOps() & ~keyOps);
 
         Runnable runnable = null;
