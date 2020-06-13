@@ -2,8 +2,13 @@ package com.richard.library.clink.core;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.WriteAbortedException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.channels.WritableByteChannel;
 
 /**
  * 对byteBuffer进行一个封装，如果byteBuffer无节制地进行创建的话，内存
@@ -13,33 +18,49 @@ public class IoArgs {
 
     private int limit = 5;
 
-    private byte[] byteBuffer = new byte[5];
-
-    private ByteBuffer buffer = ByteBuffer.wrap(byteBuffer);
+    private ByteBuffer buffer = ByteBuffer.allocate(limit);
 
     /**
-     * 从bytes中读取数据
-     * @param bytes
-     * @param offset
+     *
+     * @param channel
      * @return
+     * @throws IOException
      */
-    public int readFrom(byte[] bytes,int offset){
-        int size = Math.min(bytes.length - offset,buffer.remaining());
+    public int readFrom(ReadableByteChannel channel) throws IOException {
+        startWriting();
 
-        buffer.put(bytes,offset,size);
-        return size;
+        int bytesProduced = 0;
+        while(buffer.hasRemaining()){
+            //System.out.println(flag);
+            int len = channel.read(buffer);
+            //System.out.println(buffer);
+            if (len < 0)
+                throw new EOFException();
+            bytesProduced += len;
+        }
+
+        finishWriting();
+        return bytesProduced;
     }
 
+
     /**
-     * 写入数据到bytes中
-     * @param bytes
-     * @param offset
+     *
+     * @param channel
      * @return
+     * @throws IOException
      */
-    public int writeTo(byte[] bytes, int offset, int length){
-        int size = Math.min(length - offset,buffer.remaining());
-        buffer.get(bytes,offset,size);
-        return size;
+    public int writeTo(WritableByteChannel channel) throws IOException {
+
+        int bytesProduced = 0;
+
+        while(buffer.hasRemaining()){
+            int len = channel.write(buffer);
+            if (len < 0)
+                throw new EOFException();
+            bytesProduced += len;
+        }
+        return bytesProduced;
     }
 
     /**
@@ -75,8 +96,6 @@ public class IoArgs {
      */
     public int writeTo(SocketChannel channel) throws IOException {
 
-        startWriting();
-
         int bytesProduced = 0;
 
         while(buffer.hasRemaining()){
@@ -85,7 +104,6 @@ public class IoArgs {
                 throw new EOFException();
             bytesProduced += len;
         }
-        finishWriting();
         return bytesProduced;
     }
 
@@ -114,7 +132,9 @@ public class IoArgs {
     }
 
     public void writeLength(int total) {
+        startWriting();
         buffer.putInt(total);
+        finishWriting();
     }
 
     public int readLength(){
@@ -125,19 +145,33 @@ public class IoArgs {
         return buffer.capacity();
     }
 
-//    public String bufferString() {
-//        // 丢弃换行符
-//        //System.out.println("bytebuffer_position:"+buffer.position());
-//        return new String(byteBuffer, 0, buffer.position() - 1);
-//    }
 
-    //监听IoArgs的状态
-    public interface IoArgsEventListener {
+    /**
+     * IoArgs 提供者，处理者；数据的生产者或消费者
+     */
+    public interface IoArgsEventProcessor {
 
-        //在其开始的时候有一个回调
-        void onStarted(IoArgs args);
+        /**
+         * 提供一份可消费的IoArgs
+         * @return
+         */
+        IoArgs provideIoArgs();
 
-        //在其完成的时候有一个回调
-        void onCompleted(IoArgs args);
+
+        /**
+         * 消费失败时回调
+         * @param args
+         * @param e
+         */
+        void onConsumeFailed(IoArgs args,Exception e);
+
+        /**
+         *消费成功
+         * @param args
+         */
+        void oncConsumeCompleted(IoArgs args);
+
     }
+
+
 }

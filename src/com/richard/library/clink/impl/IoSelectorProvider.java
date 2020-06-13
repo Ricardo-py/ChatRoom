@@ -28,8 +28,8 @@ public class IoSelectorProvider implements IoProvider {
 
     private final Selector readSelector;
 
-    private final Selector writeSelector;
 
+    private final Selector writeSelector;
 
     private final HashMap<SelectionKey, Runnable> inputCallbackMap = new HashMap<>();
 

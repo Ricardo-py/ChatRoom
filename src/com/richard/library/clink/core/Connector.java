@@ -46,13 +46,10 @@ public class Connector implements Closeable, SocketChannelAdapter.OnChannelStatu
 
         sendDispatcher = new AsyncSendDispatcher(sender);
 
-
         receiveDispatcher = new AsyncReceiveDispatcher(receiver,receivePacketCallback);
 
         //启动接收
         receiveDispatcher.start();
-        //读下一条消息
-        //readNextMessage();
     }
 
     public void send(String msg){
@@ -87,20 +84,6 @@ public class Connector implements Closeable, SocketChannelAdapter.OnChannelStatu
     }
 
 
-//    private IoArgs.IoArgsEventListener echoReceiveListener = new IoArgs.IoArgsEventListener() {
-//        @Override
-//        public void onStarted(IoArgs args) {
-//
-//        }
-//
-//        @Override
-//        public void onCompleted(IoArgs args) {
-//            // 打印
-//            onReceiveNewMessage(args.bufferString());
-//            // 读取下一条数据
-//            readNextMessage();
-//        }
-//    };
 
     protected void onReceiveNewMessage(String str) {
         System.out.println(key.toString() + ":" + str);

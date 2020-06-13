@@ -7,11 +7,13 @@ import com.richard.library.clink.core.Sender;
 import com.richard.library.clink.utils.CloseUtils;
 
 import java.io.IOException;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AsyncSendDispatcher implements SendDispatcher {
+public class AsyncSendDispatcher implements SendDispatcher, IoArgs.IoArgsEventProcessor {
 
     private final Sender sender;
     private final Queue<SendPacket> queue = new ConcurrentLinkedQueue<>();
@@ -20,13 +22,16 @@ public class AsyncSendDispatcher implements SendDispatcher {
 
 
     private IoArgs ioArgs = new IoArgs();
-    private SendPacket packetTemp;
+    private SendPacket<?> packetTemp;
 
-    private int total;
-    private int position;
+    private ReadableByteChannel packetChannel;
+
+    private long total;
+    private long position;
 
     public AsyncSendDispatcher(Sender sender){
         this.sender = sender;
+        sender.setSendListener(this);
     }
 
     @Override
@@ -85,30 +90,14 @@ public class AsyncSendDispatcher implements SendDispatcher {
 
     private void sendCurrentPacket() {
 
-        IoArgs args = ioArgs;
-
-        //开始，清理
-        args.startWriting();
-
         if (position >= total){
+            completePacket(position == total);
             sendNextPacket();
             return;
-        }else if(position == 0){
-            //首包，需要携带长度信息
-            args.writeLength(total);
         }
-        byte[] bytes = packetTemp.bytes();
-
-        //把bytes的数据写入到IoArgs
-        int count = args.readFrom(bytes,position);
-
-        position += count;
-
-        //完成封装
-        args.finishWriting();
 
         try {
-            sender.sendAsync(args,ioArgsEventListener);
+            sender.postSendAsync();
         } catch (IOException e) {
             closeAndNotify();
             e.printStackTrace();
@@ -116,34 +105,73 @@ public class AsyncSendDispatcher implements SendDispatcher {
 
     }
 
+    /**
+     * packet是否发送成功
+     * @param isSucceed
+     */
+    private void completePacket(boolean isSucceed){
+        SendPacket packet = packetTemp;
+        if (packet == null){
+            return;
+        }
+        CloseUtils.close(packet);
+        CloseUtils.close(packetChannel);
+
+        packetTemp = null;
+        packetChannel = null;
+        total = 0;
+        position = 9;
+    }
+
+
     private void closeAndNotify() {
         CloseUtils.close(this);
     }
 
-    private final IoArgs.IoArgsEventListener ioArgsEventListener = new IoArgs.IoArgsEventListener() {
-        @Override
-        public void onStarted(IoArgs args) {
-
-        }
-
-        @Override
-        public void onCompleted(IoArgs args) {
-
-            //继续发送当前包
-            //System.out.println("继续发包");
-            sendCurrentPacket();
-        }
-    };
 
     @Override
     public void close() throws IOException {
         if (isClosed.compareAndSet(false,true)){
             isSending.set(false);
-            SendPacket packet = this.packetTemp;
-            if (packet != null){
-                packetTemp = null;
-                CloseUtils.close(packet);
+            //异常关闭导致的完成操作
+            completePacket(false);
+        }
+    }
+
+    @Override
+    public IoArgs provideIoArgs() {
+
+        IoArgs args = ioArgs;
+
+        if (packetChannel == null){
+            packetChannel = Channels.newChannel(packetTemp.open());
+
+            args.limit(4);
+
+            //这里需要注意(int)的强转问题
+            args.writeLength((int) packetTemp.length());
+
+        }else{
+            //这里可以强转
+            args.limit((int) Math.min(args.capacity(),total - position));
+            try {
+                int count = args.readFrom(packetChannel);
+                position += count;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
             }
         }
+        return args;
+    }
+
+    @Override
+    public void onConsumeFailed(IoArgs args, Exception e) {
+        e.printStackTrace();
+    }
+
+    @Override
+    public void oncConsumeCompleted(IoArgs args) {
+        sendCurrentPacket();
     }
 }

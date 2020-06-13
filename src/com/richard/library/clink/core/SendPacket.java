@@ -1,10 +1,12 @@
 package com.richard.library.clink.core;
 
-public abstract class SendPacket extends Packet{
+import java.io.IOException;
+import java.io.InputStream;
+
+public abstract class SendPacket<T extends InputStream> extends Packet<T>{
+
 
     private boolean isCanceled;
-
-    public abstract  byte[] bytes();
 
     public boolean isCanceled(){
         return isCanceled;
