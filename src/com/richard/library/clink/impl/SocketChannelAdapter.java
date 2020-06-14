@@ -162,9 +162,7 @@ public class SocketChannelAdapter implements
         if (isClosed.get()) {
             throw new IOException("Current channel is closed!");
         }
-
         // 当前发送的数据附加到回调中
-
         return ioProvider.registerOutput(channel, outputCallback);
     }
 

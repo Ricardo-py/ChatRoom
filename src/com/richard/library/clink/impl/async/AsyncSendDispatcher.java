@@ -120,7 +120,8 @@ public class AsyncSendDispatcher implements SendDispatcher, IoArgs.IoArgsEventPr
         packetTemp = null;
         packetChannel = null;
         total = 0;
-        position = 9;
+        position = 0;
+        //System.out.println("发送完成");
     }
 
 
@@ -146,7 +147,7 @@ public class AsyncSendDispatcher implements SendDispatcher, IoArgs.IoArgsEventPr
         if (packetChannel == null){
             packetChannel = Channels.newChannel(packetTemp.open());
 
-            args.limit(4);
+            //args.limit(4);
 
             //这里需要注意(int)的强转问题
             args.writeLength((int) packetTemp.length());
@@ -154,8 +155,10 @@ public class AsyncSendDispatcher implements SendDispatcher, IoArgs.IoArgsEventPr
         }else{
             //这里可以强转
             args.limit((int) Math.min(args.capacity(),total - position));
+
             try {
                 int count = args.readFrom(packetChannel);
+                //System.out.println("执行了" + count);
                 position += count;
             } catch (IOException e) {
                 e.printStackTrace();
@@ -174,4 +177,5 @@ public class AsyncSendDispatcher implements SendDispatcher, IoArgs.IoArgsEventPr
     public void oncConsumeCompleted(IoArgs args) {
         sendCurrentPacket();
     }
+
 }

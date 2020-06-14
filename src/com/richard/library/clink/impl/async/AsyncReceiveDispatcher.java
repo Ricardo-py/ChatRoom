@@ -28,7 +28,6 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
     private long total;
     private long position;
 
-
     public AsyncReceiveDispatcher(Receiver receiver, ReceivePacketCallback callback) {
 
         //这里的receiver是socketChannelAdaptor的具体实现类
@@ -90,6 +89,7 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
 
         try {
             int count = args.writeTo(packetChannel);
+
             position += count;
 
             if (position == total) {
@@ -148,4 +148,5 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
         assemblePacket(args);
         registerReceive();
     }
+
 }

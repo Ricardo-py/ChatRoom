@@ -16,8 +16,9 @@ import java.nio.channels.WritableByteChannel;
  */
 public class IoArgs {
 
-    private int limit = 5;
+    private final static int initial_limit = 5;
 
+    private int limit = 5;
     private ByteBuffer buffer = ByteBuffer.allocate(limit);
 
     /**
@@ -28,14 +29,17 @@ public class IoArgs {
      */
     public int readFrom(ReadableByteChannel channel) throws IOException {
         startWriting();
-
         int bytesProduced = 0;
-        while(buffer.hasRemaining()){
+        if(buffer.hasRemaining()){
             //System.out.println(flag);
             int len = channel.read(buffer);
             //System.out.println(buffer);
-            if (len < 0)
+            //System.out.println(buffer);
+            if (len < 0) {
+                //System.out.println("len小于0了");
+                //break;
                 throw new EOFException();
+            }
             bytesProduced += len;
         }
 
@@ -51,15 +55,16 @@ public class IoArgs {
      * @throws IOException
      */
     public int writeTo(WritableByteChannel channel) throws IOException {
-
+        //startWriting();
         int bytesProduced = 0;
 
-        while(buffer.hasRemaining()){
+        if(buffer.hasRemaining()){
             int len = channel.write(buffer);
             if (len < 0)
                 throw new EOFException();
             bytesProduced += len;
         }
+        //finishWriting();
         return bytesProduced;
     }
 
@@ -70,11 +75,12 @@ public class IoArgs {
      * @throws IOException
      */
     public int readFrom(SocketChannel channel) throws IOException {
+
         startWriting();
 
         int bytesProduced = 0;
 
-        while(buffer.hasRemaining()){
+        if(buffer.hasRemaining()){
             //System.out.println(flag);
             int len = channel.read(buffer);
             //System.out.println(buffer);
@@ -95,15 +101,16 @@ public class IoArgs {
      * @throws IOException
      */
     public int writeTo(SocketChannel channel) throws IOException {
-
+        //startWriting();
         int bytesProduced = 0;
 
-        while(buffer.hasRemaining()){
+        if(buffer.hasRemaining()){
             int len = channel.write(buffer);
             if (len < 0)
                 throw new EOFException();
             bytesProduced += len;
         }
+        //finishWriting();
         return bytesProduced;
     }
 
@@ -112,7 +119,7 @@ public class IoArgs {
      */
     public void startWriting(){
         buffer.clear();
-        buffer.limit();
+        buffer.limit(limit);
     }
 
     /**
@@ -129,10 +136,13 @@ public class IoArgs {
      */
     public void limit(int limit){
         this.limit = limit;
+        this.buffer.limit(limit);
     }
 
     public void writeLength(int total) {
-        startWriting();
+        buffer.clear();
+        this.limit = initial_limit;
+        this.buffer.limit(initial_limit);
         buffer.putInt(total);
         finishWriting();
     }
