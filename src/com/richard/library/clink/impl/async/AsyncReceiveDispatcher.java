@@ -1,10 +1,7 @@
 package com.richard.library.clink.impl.async;
 
 import com.richard.library.clink.box.StringReceivePacket;
-import com.richard.library.clink.core.IoArgs;
-import com.richard.library.clink.core.ReceiveDispatcher;
-import com.richard.library.clink.core.ReceivePacket;
-import com.richard.library.clink.core.Receiver;
+import com.richard.library.clink.core.*;
 import com.richard.library.clink.utils.CloseUtils;
 
 import java.io.IOException;
@@ -22,7 +19,7 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
 
     private IoArgs ioArgs = new IoArgs();
 
-    private ReceivePacket<?> packetTemp;
+    private ReceivePacket<?,?> packetTemp;
 
     private WritableByteChannel packetChannel;
     private long total;
@@ -78,7 +75,10 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
 
         if (packetTemp == null){
             int length = args.readLength();
-            packetTemp = new StringReceivePacket(length);
+
+            byte type = length > 200 ? Packet.TYPE_STREAM_FILE : Packet.TYPE_MEMORY_STRING;
+
+            packetTemp = callback.onArrivedNewPacket(type,length);
 
             packetChannel = Channels.newChannel(packetTemp.open());
 
@@ -108,7 +108,9 @@ public class AsyncReceiveDispatcher implements ReceiveDispatcher, IoArgs.IoArgsE
      * 完成数据接受操作
      */
     private void completePacket(boolean isSucceed) {
+
         ReceivePacket packet = this.packetTemp;
+
         CloseUtils.close(packet);
         packetTemp = null;
 

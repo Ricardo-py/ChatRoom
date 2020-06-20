@@ -4,6 +4,7 @@ package com.richard.sample.server;
 import com.richard.library.clink.utils.CloseUtils;
 import com.richard.sample.server.handle.ClientHandler;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
@@ -18,6 +19,7 @@ import java.util.concurrent.Executors;
 
 public class TCPServer implements ClientHandler.ClientHandlerCallback {
 
+    private final File cachepath;
     private final int port;
     private ClientListener listener;
     private List<ClientHandler> clientHandlerList = new ArrayList<>();
@@ -25,8 +27,9 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
     private Selector selector;
     private ServerSocketChannel server;
 
-    public TCPServer(int port) {
+    public TCPServer(int port, File cachepath) {
         this.port = port;
+        this.cachepath = cachepath;
         // 转发线程池
         this.forwardingThreadPoolExecutor = Executors.newSingleThreadExecutor();
     }
@@ -156,7 +159,8 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
                             try {
                                 // 客户端构建异步线程
                                 // 注意，这里仅仅只是构建异步线程，并没有真正地去执行
-                                ClientHandler clientHandler = new ClientHandler(socketChannel, TCPServer.this);
+                                ClientHandler clientHandler = new ClientHandler(socketChannel, TCPServer.this,
+                                        cachepath);
 
                                 // 添加同步处理,为什么添加同步处理
                                 synchronized (TCPServer.this) {

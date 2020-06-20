@@ -16,9 +16,9 @@ import java.nio.channels.WritableByteChannel;
  */
 public class IoArgs {
 
-    private final static int initial_limit = 5;
+    private final static int initial_limit = 256;
 
-    private int limit = 5;
+    private int limit = 256;
     private ByteBuffer buffer = ByteBuffer.allocate(limit);
 
     /**

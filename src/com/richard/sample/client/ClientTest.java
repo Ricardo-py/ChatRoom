@@ -2,7 +2,9 @@ package com.richard.sample.client;
 
 
 import com.richard.sample.client.bean.ServerInfo;
+import com.richard.sample.foo.Foo;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,6 +13,9 @@ public class ClientTest {
     private static boolean done;
 
     public static void main(String[] args) throws IOException {
+
+        File cachePath = Foo.getCacheDir("client/test");
+
         ServerInfo info = UDPSearcher.searchServer(10000);
         System.out.println("Server:" + info);
         if (info == null) {
@@ -22,7 +27,7 @@ public class ClientTest {
         final List<TCPClient> tcpClients = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
             try {
-                TCPClient tcpClient = TCPClient.startWith(info);
+                TCPClient tcpClient = TCPClient.startWith(info,cachePath);
                 if (tcpClient == null) {
                     System.out.println("连接异常");
                     continue;

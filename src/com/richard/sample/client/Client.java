@@ -2,22 +2,22 @@ package com.richard.sample.client;
 
 
 
+import com.richard.library.clink.box.FileSendPacket;
 import com.richard.library.clink.core.IoContext;
 import com.richard.library.clink.impl.IoSelectorProvider;
 import com.richard.sample.client.bean.ServerInfo;
+import com.richard.sample.foo.Foo;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 
 public class Client {
     public static void main(String[] args) throws IOException {
 
+        File cachePath = Foo.getCacheDir("client");
+
         IoContext.setup()
                 .ioProvider(new IoSelectorProvider())
                 .start();
-
         ServerInfo info = UDPSearcher.searchServer(10000);
         System.out.println("Client:" + info);
 
@@ -25,7 +25,7 @@ public class Client {
             TCPClient tcpClient = null;
 
             try {
-                tcpClient = TCPClient.startWith(info);
+                tcpClient = TCPClient.startWith(info,cachePath);
                 if (tcpClient == null) {
                     return;
                 }
@@ -51,17 +51,31 @@ public class Client {
         do {
             // 键盘读取一行
             String str = input.readLine();
-            System.out.println(str.length());
-                // 发送到服务器
-                tcpClient.send(str);
-                tcpClient.send(str);
-                //Thread.sleep(1000);
-                tcpClient.send(str);
-                //Thread.sleep(1000);
-                tcpClient.send(str);
-                if ("00bye00".equalsIgnoreCase(str)) {
-                    break;
+            if ("00bye00".equalsIgnoreCase(str)) {
+                break;
+            }
+            if (str.startsWith("--f")){
+                String[] array = str.split(" ");
+                if (array.length >= 2){
+                    String filePath = array[1];
+                    File file = new File(filePath);
+                    if (file.exists() && file.isFile()){
+                        FileSendPacket packet = new FileSendPacket(file);
+                        tcpClient.send(packet);
+                        continue;
+                    }
                 }
+            }
+
+            //System.out.println(str.length());
+                // 发送字符串
+                tcpClient.send(str);
+//                tcpClient.send(str);
+//                //Thread.sleep(1000);
+//                tcpClient.send(str);
+//                //Thread.sleep(1000);
+//                tcpClient.send(str);
+
 
         } while (true);
     }

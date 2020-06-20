@@ -3,8 +3,11 @@ package com.richard.sample.client;
 
 
 import com.richard.library.clink.core.Connector;
+import com.richard.library.clink.core.Packet;
+import com.richard.library.clink.core.ReceivePacket;
 import com.richard.library.clink.utils.CloseUtils;
 import com.richard.sample.client.bean.ServerInfo;
+import com.richard.sample.foo.Foo;
 
 import java.io.*;
 import java.net.Inet4Address;
@@ -15,8 +18,11 @@ import java.nio.channels.SocketChannel;
 
 public class TCPClient extends Connector {
 
-    public TCPClient(SocketChannel socketChannel) throws IOException {
+    private final File cachePath;
+
+    public TCPClient(SocketChannel socketChannel,File cachePath) throws IOException {
         setup(socketChannel);
+        this.cachePath = cachePath;
     }
 
     public void exit() {
@@ -30,7 +36,23 @@ public class TCPClient extends Connector {
         System.out.println("连接已经关闭");
     }
 
-    public static TCPClient startWith(ServerInfo info) throws IOException {
+    @Override
+    protected File createNewReceiveFile() {
+
+        return Foo.createRandomTemp(cachePath);
+    }
+
+    @Override
+    protected void onReceivePacket(ReceivePacket packet) {
+        super.onReceivePacket(packet);
+        if (packet.type() == Packet.TYPE_MEMORY_STRING){
+            String string = (String) packet.entity();
+            System.out.println(key.toString() + ":" + string);
+        }
+    }
+
+
+    public static TCPClient startWith(ServerInfo info,File cachePath) throws IOException {
         SocketChannel socketChannel = SocketChannel.open();
 
         // 连接本地，端口2000；超时时间3000ms
@@ -41,7 +63,7 @@ public class TCPClient extends Connector {
         System.out.println("服务器信息：" + socketChannel.getRemoteAddress());
 
         try {
-            return new TCPClient(socketChannel);
+            return new TCPClient(socketChannel,cachePath);
         } catch (Exception e) {
             System.out.println("连接异常");
             CloseUtils.close(socketChannel);

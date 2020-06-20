@@ -1,26 +1,23 @@
 package com.richard.library.clink.box;
 
-import com.richard.library.clink.core.SendPacket;
+import static com.richard.library.clink.core.Packet.TYPE_MEMORY_STRING;
 
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
+/**
+ * 字符串发送包
+ */
+public class StringSendPacket extends BytesSendPacket {
 
-public class StringSendPacket extends SendPacket<ByteArrayInputStream> {
-
-    private final byte[] bytes;
-
-
-    public StringSendPacket(String msg){
-        this.bytes = msg.getBytes();
-        this.length = bytes.length;
+    /**
+     * 字符串发送时就是Byte数组，所以直接得到Byte数组，并按照Byte的发送方式发送即可
+     *
+     * @param msg 字符串
+     */
+    public StringSendPacket(String msg) {
+        super(msg.getBytes());
     }
-
 
     @Override
-    protected ByteArrayInputStream createStream() {
-        return new ByteArrayInputStream(bytes);
+    public byte type() {
+        return TYPE_MEMORY_STRING;
     }
-
 }
