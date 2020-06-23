@@ -1,8 +1,11 @@
 package com.richard.library.clink.core;
 
-import java.io.IOException;
 import java.io.InputStream;
 
+/**
+ * 发送包的定义
+ * @param <T>
+ */
 public abstract class SendPacket<T extends InputStream> extends Packet<T>{
 
 
@@ -12,4 +15,10 @@ public abstract class SendPacket<T extends InputStream> extends Packet<T>{
         return isCanceled;
     }
 
+    /**
+     * 设置取消发送标记
+     */
+    public void cancel(){
+        isCanceled = true;
+    }
 }

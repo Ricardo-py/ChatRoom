@@ -21,6 +21,28 @@ public class IoArgs {
     private int limit = 256;
     private ByteBuffer buffer = ByteBuffer.allocate(limit);
 
+
+    /**
+     * 从bytes数组进行消费
+     * @param bytes
+     * @param offset
+     * @param count
+     * @return
+     */
+    public int readFrom(byte[] bytes, int offset, int count) {
+        int size = Math.min(count,buffer.remaining());
+        if (size <= 0)
+            return 0;
+        buffer.put(bytes,offset,size);
+        return size;
+    }
+
+    public int writeTo(byte[] bytes,int offset){
+        int size = Math.min(bytes.length - offset, buffer.remaining());
+        buffer.get(bytes,offset,size);
+        return size;
+    }
+
     /**
      *
      * @param channel
@@ -28,7 +50,7 @@ public class IoArgs {
      * @throws IOException
      */
     public int readFrom(ReadableByteChannel channel) throws IOException {
-        startWriting();
+        //startWriting();
         int bytesProduced = 0;
         if(buffer.hasRemaining()){
             //System.out.println(flag);
@@ -43,7 +65,7 @@ public class IoArgs {
             bytesProduced += len;
         }
 
-        finishWriting();
+        //finishWriting();
         return bytesProduced;
     }
 
@@ -135,17 +157,17 @@ public class IoArgs {
      * @param limit
      */
     public void limit(int limit){
-        this.limit = limit;
-        this.buffer.limit(limit);
+        this.limit = Math.min(limit,buffer.capacity());
+        this.buffer.limit(this.limit);
     }
 
-    public void writeLength(int total) {
-        buffer.clear();
-        this.limit = initial_limit;
-        this.buffer.limit(initial_limit);
-        buffer.putInt(total);
-        finishWriting();
-    }
+//    public void writeLength(int total) {
+//        buffer.clear();
+//        this.limit = initial_limit;
+//        this.buffer.limit(initial_limit);
+//        buffer.putInt(total);
+//        finishWriting();
+//    }
 
     public int readLength(){
         return buffer.getInt();
@@ -153,6 +175,28 @@ public class IoArgs {
 
     public int capacity() {
         return buffer.capacity();
+    }
+
+    public boolean remained() {
+        return buffer.remaining() > 0;
+    }
+
+    public int fillEmpty(int size) {
+        int fillSize = Math.min(size,buffer.remaining());
+        buffer.position(buffer.position() + fillSize);
+        return fillSize;
+    }
+
+    /**
+     * 清空部分数据
+     *
+     * @param size 想要清空的数据长度
+     * @return 真实清空的数据长度
+     */
+    public int setEmpty(int size) {
+        int emptySize = Math.min(size, buffer.remaining());
+        buffer.position(buffer.position() + emptySize);
+        return emptySize;
     }
 
 

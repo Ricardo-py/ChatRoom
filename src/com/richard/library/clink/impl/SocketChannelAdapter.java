@@ -82,7 +82,11 @@ public class SocketChannelAdapter implements
             IoArgs args = processor.provideIoArgs();
 
             try {
-                if (args.readFrom(channel) > 0){
+                if (args == null){
+
+                    processor.onConsumeFailed(null,new IOException("ProvideIoArgs is null."));
+
+                }else if (args.readFrom(channel) > 0){
                     processor.oncConsumeCompleted(args);
                 }else {
                     processor.onConsumeFailed(args,new IOException("Cannot readFrom any data!"));
