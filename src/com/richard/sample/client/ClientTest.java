@@ -1,6 +1,8 @@
 package com.richard.sample.client;
 
 
+import com.richard.library.clink.core.IoContext;
+import com.richard.library.clink.impl.IoSelectorProvider;
 import com.richard.sample.client.bean.ServerInfo;
 import com.richard.sample.foo.Foo;
 
@@ -15,6 +17,7 @@ public class ClientTest {
     public static void main(String[] args) throws IOException {
 
         File cachePath = Foo.getCacheDir("client/test");
+        IoContext.setup().ioProvider(new IoSelectorProvider()).start();
 
         ServerInfo info = UDPSearcher.searchServer(10000);
         System.out.println("Server:" + info);
@@ -25,27 +28,28 @@ public class ClientTest {
         // 当前连接数量
         int size = 0;
         final List<TCPClient> tcpClients = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
             try {
                 TCPClient tcpClient = TCPClient.startWith(info,cachePath);
                 if (tcpClient == null) {
                     System.out.println("连接异常");
-                    continue;
+                    throw new NullPointerException();
                 }
 
                 tcpClients.add(tcpClient);
 
                 System.out.println("连接成功：" + (++size));
 
-            } catch (IOException e) {
+            } catch (IOException | NullPointerException e) {
                 System.out.println("连接异常");
+                break;
             }
 
-            try {
-                Thread.sleep(20);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+//            try {
+//                Thread.sleep(20);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
         }
 
 
@@ -82,6 +86,7 @@ public class ClientTest {
             tcpClient.exit();
         }
 
+        IoContext.close();
     }
 
 }

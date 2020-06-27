@@ -132,6 +132,7 @@ public class IoArgs {
                 throw new EOFException();
             bytesProduced += len;
         }
+
         //finishWriting();
         return bytesProduced;
     }

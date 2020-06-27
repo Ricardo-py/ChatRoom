@@ -166,6 +166,7 @@ public class TCPServer implements ClientHandler.ClientHandlerCallback {
                                 synchronized (TCPServer.this) {
                                     //这里的ArrayList并不是线程安全的，所以在高并发的情况下要添加线程安全处理
                                     clientHandlerList.add(clientHandler);
+                                    System.out.println("当前客户端数量" + clientHandlerList.size());
                                 }
 
                             } catch (IOException e) {

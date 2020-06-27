@@ -126,14 +126,16 @@ public class SocketChannelAdapter implements
             IoArgs args = processor.provideIoArgs();
 
             try {
-                if (args.writeTo(channel) > 0){
+                if (args == null){
+                    processor.onConsumeFailed(null,new IOException("ProvideIoArgs is null."));
+                }else if (args.writeTo(channel) > 0){
                     processor.oncConsumeCompleted(args);
                 }else {
                     processor.onConsumeFailed(args,new IOException("Cannot Write any data!"));
                 }
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 CloseUtils.close(SocketChannelAdapter.this);
-                e.printStackTrace();
+                //e.printStackTrace();
             }
 
             // TODO
